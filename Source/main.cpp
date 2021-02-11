@@ -4,6 +4,8 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <GL/GL.h>
+#include <math.h>
+#include "Shader.h"
 
 const char* VERT_SRC = ""
 "#version 330 core\n"
@@ -70,6 +72,9 @@ const char* FRAG_SRC2 = ""
 "	o_Color = vec4(0.2, 0.5, 0.8, 1.0);\n"
 "}";
 
+float SCALE = 1.0f;
+float XMOD = 0.0f;
+
 void HandleKeyEvent(GLFWwindow* window, int key, int scancode, int action, int modifiers)
 {
 	if (action != GLFW_PRESS)
@@ -113,22 +118,26 @@ void HandleKeyEvent(GLFWwindow* window, int key, int scancode, int action, int m
 
 		if (key == GLFW_KEY_LEFT)
 		{
-			horizontal -= 1;
+			// horizontal -= 1;
+			XMOD -= 0.1f;
 		}
 
 		if (key == GLFW_KEY_RIGHT)
 		{
-			horizontal += 1;
+			// horizontal += 1;
+			XMOD += 0.1f;
 		}
 
 		if (key == GLFW_KEY_UP)
 		{
-			vertical -= 1;
+			// vertical -= 1;
+			SCALE += 0.1f;
 		}
 
 		if (key == GLFW_KEY_DOWN)
 		{
-			vertical += 1;
+			// vertical += 1;
+			SCALE -= 0.1f;
 		}
 
 		glfwSetWindowPos(window, horizontal, vertical);
@@ -332,12 +341,34 @@ int main()
 		5, 6, 7,
 	};
 
+
 	GLuint tetraminoVAO = Create_VAO_For_Data(tetraminoVerticies, sizeof(tetraminoVerticies));
 	GLuint tetraminoEBO = Create_EBO_For_Data(tetraminoIndicies, sizeof(tetraminoIndicies));
-	GLuint program = Create_Shader_Program(VERT_SRC, PurpleTetraminoShader);
+
+	// GLuint program = Create_Shader_Program(VERT_SRC, PurpleTetraminoShader);
+	GLuint program = load_shader_program("Shaders/test.vert", "Shaders/test.frag");
+	glUseProgram(program);
+
+	GLint u_Color_a = glGetUniformLocation(program, "u_Color_a");
+	GLint u_Color_b = glGetUniformLocation(program, "u_Color_b");
+	GLint u_Time = glGetUniformLocation(program, "u_Time");
+	GLint u_Scale = glGetUniformLocation(program, "u_Scale");
+	GLint u_XpositionMod = glGetUniformLocation(program, "u_XpositionMod");
+	
+
+	float my_color_a[] = { 0.5f, 0.2f, 0.6f, 1.0f };
+	glUniform4fv(u_Color_a, 1, my_color_a);
+
+	float my_color_b[] = { 0.8f, 0.2f, 0.2f, 1.0f };
+	glUniform4fv(u_Color_b, 1, my_color_b);
 
 	while (!glfwWindowShouldClose(window))
 	{
+		float time = glfwGetTime();
+		glUniform1f(u_Time, time);
+		glUniform1f(u_Scale, SCALE);
+		glUniform1f(u_XpositionMod, XMOD);
+
 		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
