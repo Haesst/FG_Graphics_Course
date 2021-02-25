@@ -5,75 +5,16 @@
 #include <GLFW/glfw3.h>
 #include <GL/GL.h>
 #include <math.h>
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include "Shader.h"
+#include "Mesh.h"
+#include "Globals.h"
 
-const char* VERT_SRC = ""
-"#version 330 core\n"
-"in vec2 a_Position;\n"
-"void main()\n"
-"{\n"
-"	gl_Position = vec4(a_Position.x, a_Position.y, 0.0, 1.0);\n"
-"}";
-
-const char* OrangeShader = ""
-"#version 330 core\n"
-"out vec4 o_Color;\n"
-"void main()\n"
-"{\n"
-"	o_Color = vec4(1.0, 0.5, 0.2, 1.0);\n"
-"}";
-
-const char* BlueTetraminoShader = ""
-"#version 330 core\n"
-"out vec4 o_Color;\n"
-"void main()\n"
-"{\n"
-"	o_Color = vec4(0.2, 1.0, 1.0, 1.0);\n"
-"}";
-
-const char* YellowTetraminoShader = ""
-"#version 330 core\n"
-"out vec4 o_Color;\n"
-"void main()\n"
-"{\n"
-"	o_Color = vec4(1.0, 1.0, 0.266, 1.0);\n"
-"}";
-
-const char* OrangeTetraminoShader = ""
-"#version 330 core\n"
-"out vec4 o_Color;\n"
-"void main()\n"
-"{\n"
-"	o_Color = vec4(1.0, 0.533, 0.0, 1.0);\n"
-"}";
-
-const char* GreenTetraminoShader = ""
-"#version 330 core\n"
-"out vec4 o_Color;\n"
-"void main()\n"
-"{\n"
-"	o_Color = vec4(0.266, 1.0, 0.266, 1.0);\n"
-"}";
-
-const char* PurpleTetraminoShader = ""
-"#version 330 core\n"
-"out vec4 o_Color;\n"
-"void main()\n"
-"{\n"
-"	o_Color = vec4(1.0, 0.266, 1.0, 1.0);\n"
-"}";
-
-
-const char* FRAG_SRC2 = ""
-"#version 330 core\n"
-"out vec4 o_Color;\n"
-"void main()\n"
-"{\n"
-"	o_Color = vec4(0.2, 0.5, 0.8, 1.0);\n"
-"}";
-
-float SCALE = 1.0f;
-float XMOD = 0.0f;
+using namespace glm;
 
 void HandleKeyEvent(GLFWwindow* window, int key, int scancode, int action, int modifiers)
 {
@@ -94,7 +35,7 @@ void HandleKeyEvent(GLFWwindow* window, int key, int scancode, int action, int m
 
 	if (key == GLFW_KEY_ESCAPE)
 	{
-		glfwDestroyWindow(window);
+		glfwSetWindowShouldClose(window, GL_TRUE);
 	}
 
 	if (key == GLFW_KEY_ENTER && modifiers == GLFW_MOD_ALT)
@@ -110,54 +51,29 @@ void HandleKeyEvent(GLFWwindow* window, int key, int scancode, int action, int m
 			glfwMaximizeWindow(window);
 		}
 	}
-
-	if (key == GLFW_KEY_LEFT || key == GLFW_KEY_UP || key == GLFW_KEY_RIGHT || key == GLFW_KEY_DOWN)
-	{
-		int horizontal, vertical;
-		glfwGetWindowPos(window, &horizontal, &vertical);
-
-		if (key == GLFW_KEY_LEFT)
-		{
-			// horizontal -= 1;
-			XMOD -= 0.1f;
-		}
-
-		if (key == GLFW_KEY_RIGHT)
-		{
-			// horizontal += 1;
-			XMOD += 0.1f;
-		}
-
-		if (key == GLFW_KEY_UP)
-		{
-			// vertical -= 1;
-			SCALE += 0.1f;
-		}
-
-		if (key == GLFW_KEY_DOWN)
-		{
-			// vertical += 1;
-			SCALE -= 0.1f;
-		}
-
-		glfwSetWindowPos(window, horizontal, vertical);
-	}
 }
 
 void HandleMouseEvent(GLFWwindow* window, int button, int action, int modifier)
 {
-	if (action != GLFW_PRESS)
+	if (button == GLFW_MOUSE_BUTTON_RIGHT)
 	{
-		return;
-	}
+		if (action == GLFW_PRESS)
+		{
+			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+			cam_control = true;
+		}
 
-	if (button == GLFW_MOUSE_BUTTON_LEFT)
-	{
-		double xPos, yPos;
-		glfwGetCursorPos(window, &xPos, &yPos);
-
-		printf("Kapow! You shot (%f, %f)\n", xPos, yPos);
+		if (action == GLFW_RELEASE)
+		{
+			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+			cam_control = false;
+		}
 	}
+}
+
+void HandleMousePos(GLFWwindow* window, double mouse_x, double mouse_y)
+{
+	mouse_position = vec2(mouse_x, mouse_y);
 }
 
 GLuint Create_Shader(const char* source, GLenum type)
@@ -203,8 +119,16 @@ GLuint Create_VAO_For_Data(float* vertex_data, int data_size)
 	glGenVertexArrays(1, &vao);
 	glBindVertexArray(vao);
 
+	GLsizei stride = sizeof(float) * 7;
+
 	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 2, GL_FLOAT, false, 0, 0);
+	glVertexAttribPointer(0, 2, GL_FLOAT, false, stride, 0);
+
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(1, 3, GL_FLOAT, false, stride, (void*)(2 * sizeof(float)));
+
+	glEnableVertexAttribArray(2);
+	glVertexAttribPointer(2, 2, GL_FLOAT, false, stride, (void*)(5 * sizeof(float)));
 
 	return vao;
 }
@@ -228,151 +152,125 @@ void Draw(GLuint program, GLuint vertices, GLuint indicies, GLuint indexCount, G
 	glDrawElements(drawMode, indexCount, GL_UNSIGNED_INT, offset);
 }
 
-/*
+GLuint Load_Texture(const char* path)
+{
+	// Textures! Very cool
+	int width, height;
+	int channels;
+	stbi_uc* tex_data = stbi_load(path, &width, &height, &channels, 0);
 
-Tetramino 1, blue:
+	GLuint texture;
+	glGenTextures(1, &texture);
+	glBindTexture(GL_TEXTURE_2D, texture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, tex_data);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-	float tetraminoVerticies[] =
-	{
-		-0.9, 0.3,	 // 0
-		 0.9, 0.3,   // 1
-		-0.9, -0.3,  // 2
-		 0.9, -0.3,  // 3
-	};
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
-	GLuint tetraminoIndicies[] =
-	{
-		0, 1, 2,
-		1, 2, 3,
-	};
+	return texture;
+}
 
-	Yellow:
-	float tetraminoVerticies[] =
-	{
-		-0.4, 0.4,	 // 0
-		 0.4, 0.4,   // 1
-		-0.4, -0.4,  // 2
-		 0.4, -0.4,  // 3
-	};
-
-	GLuint tetraminoIndicies[] =
-	{
-		0, 1, 2,
-		1, 2, 3,
-	};
-
-	Orange:
-
-	float tetraminoVerticies[] =
-	{
-		-0.3, 0.5,	 // 0
-		-0.1, 0.5,   // 1
-		-0.3, -0.4,  // 2
-		-0.1, -0.4,  // 3
-		 0.05, -0.4,  // 4
-		 0.05, -0.65,  // 5
-		-0.3, -0.65,  // 6
-	};
-
-	GLuint tetraminoIndicies[] =
-	{
-		0, 1, 2,
-		1, 2, 3,
-		2, 4, 5,
-		5, 6, 2,
-	};
-
-	Green:
-
-	float tetraminoVerticies[] =
-	{
-		-0.2,  0.4, // 0
-		 0.0,  0.4, // 1
-		-0.2, -0.15, // 2
-		 0.0, -0.15, // 3
-
-		 0.0,  0.15, // 4
-		 0.2,  0.15, // 5
-		 0.0, -0.4, // 6
-		 0.2, -0.4, // 7
-	};
-
-	GLuint tetraminoIndicies[] =
-	{
-		0, 1, 2,
-		1, 2, 3,
-
-		4, 5, 6,
-		5, 6, 7,
-	};
-*/
+void Handle_Framebuffer_Resize(GLFWwindow* window, int width, int height)
+{
+	glViewport(0, 0, width, height);
+	cam.aspect = width / (float)height;
+}
 
 int main()
 {
 	glfwInit();
 
-	GLFWwindow* window = glfwCreateWindow(800, 600, "Graphics are kewl", NULL, NULL);
+	window = glfwCreateWindow(1024, 768, "Graphics are kewl", NULL, NULL);
 	glfwMakeContextCurrent(window);
+	glfwSetFramebufferSizeCallback(window, Handle_Framebuffer_Resize);
 
 	glewInit();
 
 	glfwSetKeyCallback(window, HandleKeyEvent);
 	glfwSetMouseButtonCallback(window, HandleMouseEvent);
+	glfwSetCursorPosCallback(window, HandleMousePos);
 
-	float tetraminoVerticies[] =
-	{
-		-0.2,  0.4, // 0
-		 0.4,  0.4, // 1
-		-0.2,  0.2, // 2
-		 0.4,  0.2, // 3
-
-		 0.0,  0.2, // 4
-		 0.2,  0.2, // 5
-		 0.0,  0.0, // 6
-		 0.2,  0.0, // 7
-	};
-
-	GLuint tetraminoIndicies[] =
-	{
-		0, 1, 2,
-		1, 2, 3,
-
-		4, 5, 6,
-		5, 6, 7,
-	};
-
-
-	GLuint tetraminoVAO = Create_VAO_For_Data(tetraminoVerticies, sizeof(tetraminoVerticies));
-	GLuint tetraminoEBO = Create_EBO_For_Data(tetraminoIndicies, sizeof(tetraminoIndicies));
+	glEnable(GL_DEPTH_TEST);
 
 	// GLuint program = Create_Shader_Program(VERT_SRC, PurpleTetraminoShader);
-	GLuint program = load_shader_program("Shaders/test.vert", "Shaders/test.frag");
-	glUseProgram(program);
+	Material mat = LoadMaterial("Shaders/square.vert", "Shaders/square.frag");
+	MaterialAddTexture(&mat, Load_Texture("Assets/texture.jpg"));
+	MaterialUse(mat);
 
-	GLint u_Color_a = glGetUniformLocation(program, "u_Color_a");
-	GLint u_Color_b = glGetUniformLocation(program, "u_Color_b");
-	GLint u_Time = glGetUniformLocation(program, "u_Time");
-	GLint u_Scale = glGetUniformLocation(program, "u_Scale");
-	GLint u_XpositionMod = glGetUniformLocation(program, "u_XpositionMod");
-	
+	Material mat2 = LoadMaterial("Shaders/light.vert", "Shaders/light.frag");
+	MaterialAddTexture(&mat2, Load_Texture("Assets/texture2.jpg"));
 
-	float my_color_a[] = { 0.5f, 0.2f, 0.6f, 1.0f };
-	glUniform4fv(u_Color_a, 1, my_color_a);
+	Material mat_pointLight = LoadMaterial("Shaders/light.vert", "Shaders/point_light.frag");
 
-	float my_color_b[] = { 0.8f, 0.2f, 0.2f, 1.0f };
-	glUniform4fv(u_Color_b, 1, my_color_b);
+	// Mesh loading
+	Mesh alien = Mesh_Load("Assets/Alien Animal.obj");
+	Mesh spaceship = Mesh_Load("Assets/Spaceship.obj");
+	Mesh sphere = Mesh_Load("Assets/SmoothSphere.obj");
+	Mesh monkey = Mesh_Load("Assets/Monkey.obj");
+	Mesh cube = Mesh_Load("Assets/Cube.obj");
+
+	// Set initial aspect ratio of camera
+	int width, height;
+	glfwGetFramebufferSize(window, &width, &height);
+	cam.aspect = width / (float)height;
+
+	// For calculating delta time and mouse delta
+	float last_time = glfwGetTime();
+	vec2 last_mouse_position = mouse_position;
 
 	while (!glfwWindowShouldClose(window))
 	{
+		// Calculate delta time
 		float time = glfwGetTime();
-		glUniform1f(u_Time, time);
-		glUniform1f(u_Scale, SCALE);
-		glUniform1f(u_XpositionMod, XMOD);
+		delta_time = time - last_time;
+		last_time = time;
+		MaterialSet("u_Time", time);
+
+		// Calculate delta mouse movement
+		mouse_delta = mouse_position - last_mouse_position;
+		last_mouse_position = mouse_position;
+
+		// Update camera
+		CamUpdate();
+
+		int width, height;
+		glfwGetWindowSize(window, &width, &height);
 
 		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		Draw(program, tetraminoVAO, tetraminoEBO, 12, GL_TRIANGLES, 0);
+		// Draw nice meshes!
+		Render_Data render_data;
+		render_data.eye_position = cam.position;
+		render_data.view_projection = CamMatrix();
+		render_data.material = &mat2;
+
+		render_data.directional_light = normalize(vec3(-1.0, -1.0f, -1.0f));
+		render_data.model = translate(identity<mat4>(), vec3(0.0f, -1.0f, 0.0f)) * scale(identity<mat4>(), vec3(0.1f));
+
+		//render_data.point_light.position = vec3(0.0f, 0.0f, 3.0f);
+		render_data.point_light.position = vec3(cos(time / 3.0f), 0.0f, sin(time)) * 5.0f;
+		render_data.point_light.intensity = cos(time * 2.0f) * 0.5f + 1.5f;
+
+
+		Mesh_Draw(alien, render_data);
+
+		render_data.model = translate(identity<mat4>(), vec3(0.0f, -2.5f, 0.0f)) * scale(mat4(1.0f), vec3(25.0f, 0.5f, 25.0f));
+		Mesh_Draw(cube, render_data);
+
+		render_data.model = translate(identity<mat4>(), vec3(3.5f, 0.0f, 0.0f)) * scale(identity<mat4>(), vec3(0.4f));
+		Mesh_Draw(spaceship, render_data);
+
+		render_data.material = &mat2;
+		//render_data.model = translate(identity<mat4>(), vec3(-2.5f, 0.0f, 0.0f));
+		render_data.model = translate(identity<mat4>(), vec3(-3.5f, 0.0f, 0.0f)) * rotate(identity<mat4>(), time * 8.0f, vec3(0.0f, 1.0f, 0.0f));
+		Mesh_Draw(monkey, render_data);
+
+		render_data.model = translate(identity<mat4>(), render_data.point_light.position) * scale(mat4(1.0f), vec3(0.1f));
+		render_data.material = &mat_pointLight;
+		Mesh_Draw(sphere, render_data);
 
 		glfwPollEvents();
 		glfwSwapBuffers(window);

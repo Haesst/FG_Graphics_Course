@@ -1,4 +1,0 @@
-﻿  main.cpp
-C:\Users\robin\Documents\C++\Graphics Course\Source\main.cpp(333,2): warning C4305: 'initializing': truncation from 'double' to 'float'
-C:\Users\robin\Documents\C++\Graphics Course\Source\main.cpp(367,14): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
-  GraphicsCourse.vcxproj -> C:\Users\robin\Documents\C++\Graphics Course\Binaries\GraphicsCourse.exe
