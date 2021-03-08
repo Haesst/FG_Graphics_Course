@@ -80,8 +80,13 @@ void Mesh_Draw(const Mesh& mesh, Render_Data& data)
 	MaterialSet("u_EyePosition", data.eye_position);
 
 	// Set point lights
-	MaterialSet("u_PointLight.position", data.point_light.position);
-	MaterialSet("u_PointLight.intensity", data.point_light.intensity);
+	MaterialSet("u_PointLight[0].position", data.point_light[0].position);
+	MaterialSet("u_PointLight[0].color", data.point_light[0].color);
+	MaterialSet("u_PointLight[0].intensity", data.point_light[0].intensity);
+
+	MaterialSet("u_PointLight[1].position", data.point_light[1].position);
+	MaterialSet("u_PointLight[1].color", data.point_light[1].color);
+	MaterialSet("u_PointLight[1].intensity", data.point_light[1].intensity);
 
 	glDrawArrays(GL_TRIANGLES, 0, mesh.draw_count);
 }

@@ -9,6 +9,7 @@ struct Material;
 struct Point_Light
 {
 	glm::vec3 position = glm::vec3(0.0f);
+	glm::vec3 color = glm::vec3(1.0f);
 	float intensity = 1.0f;
 };
 
@@ -23,7 +24,7 @@ struct Render_Data
 	glm::vec3 directional_light;
 	glm::vec3 eye_position;
 
-	Point_Light point_light;
+	Point_Light point_light[2];
 };
 
 struct Mesh

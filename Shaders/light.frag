@@ -10,11 +10,12 @@ uniform vec3 u_EyePosition;
 
 struct Point_Light
 {
+	vec3 color;
 	vec3 position;
 	float intensity;
 };
 
-uniform Point_Light u_PointLight;
+uniform Point_Light u_PointLight[2];
 
 // Light data
 const vec3 AMBIENT = vec3(0.4, 1.0, 0.2);
@@ -23,7 +24,7 @@ const float SPEC_EXPONENT = 32.0;
 const float SPEC_INTENSITY = 0.8;
 
 
-vec3 Light_Func(vec3 light_dir, float intensity)
+vec3 Light_Func(vec3 light_dir, vec3 color, float intensity)
 {
 	// Diffuse lighting
 	float diffuse = dot(f_Normal, -light_dir);
@@ -37,7 +38,7 @@ vec3 Light_Func(vec3 light_dir, float intensity)
 	specular = max(specular, 0.0);
 	specular = pow(specular, SPEC_EXPONENT) * SPEC_INTENSITY;
 
-	return vec3(1.0) * (diffuse + specular) * intensity;
+	return color * (diffuse + specular) * intensity;
 }
 
 // Output
@@ -48,12 +49,17 @@ void main()
 	vec3 light_clr = vec3(0.0);
 
 	// Add directional light
-	light_clr += Light_Func(u_DirectionalLight, 0.8);
+	// light_clr += Light_Func(u_DirectionalLight, vec3(1.0), 0.8);
 
 	// Add point light
-	vec3 point_light_dir = normalize(f_World - u_PointLight.position);
-	float dist = 1.0f / length(f_World - u_PointLight.position);
-	light_clr += Light_Func(point_light_dir, u_PointLight.intensity) * dist;
+	for (int i = 0; i < 2; ++i)
+	{
+		Point_Light light = u_PointLight[i];
+
+		vec3 point_light_dir = normalize(f_World - light.position);
+		float dist = 1.0f / length(f_World - light.position);
+		light_clr += Light_Func(point_light_dir, light.color, light.intensity) * dist;
+	}
 
 	// Ambient ligthing
 	vec3 ambient = AMBIENT * AMBIENT_STRENGTH;

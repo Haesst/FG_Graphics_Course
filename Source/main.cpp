@@ -251,8 +251,13 @@ int main()
 		render_data.model = translate(identity<mat4>(), vec3(0.0f, -1.0f, 0.0f)) * scale(identity<mat4>(), vec3(0.1f));
 
 		//render_data.point_light.position = vec3(0.0f, 0.0f, 3.0f);
-		render_data.point_light.position = vec3(cos(time / 3.0f), 0.0f, sin(time)) * 5.0f;
-		render_data.point_light.intensity = cos(time * 2.0f) * 0.5f + 1.5f;
+		render_data.point_light[0].position = vec3(cos(time / 3.0f), 0.0f, sin(time)) * 5.0f;
+		render_data.point_light[0].color = vec3(1.0f, 0.0f, 0.0f);
+		render_data.point_light[0].intensity = cos(time * 2.0f) * 0.5f + 1.5f;
+
+		render_data.point_light[1].position = vec3(cos(time * 1.6f), cos(time * 0.7f) * 0.4f, sin(time * 1.6)) * 4.0f;
+		render_data.point_light[1].color = vec3(0.0f, 0.6f, 0.6f);
+		render_data.point_light[1].intensity = 0.8f;
 
 
 		Mesh_Draw(alien, render_data);
@@ -268,9 +273,12 @@ int main()
 		render_data.model = translate(identity<mat4>(), vec3(-3.5f, 0.0f, 0.0f)) * rotate(identity<mat4>(), time * 8.0f, vec3(0.0f, 1.0f, 0.0f));
 		Mesh_Draw(monkey, render_data);
 
-		render_data.model = translate(identity<mat4>(), render_data.point_light.position) * scale(mat4(1.0f), vec3(0.1f));
-		render_data.material = &mat_pointLight;
-		Mesh_Draw(sphere, render_data);
+		for (int i = 0; i < 2; ++i)
+		{
+			render_data.model = translate(identity<mat4>(), render_data.point_light[i].position) * scale(mat4(1.0f), vec3(0.1f));
+			render_data.material = &mat_pointLight;
+			Mesh_Draw(sphere, render_data);
+		}
 
 		glfwPollEvents();
 		glfwSwapBuffers(window);
